@@ -1,0 +1,1 @@
+{"expo":{"name":"Software Doctor AI","slug":"software-doctor-ai","scheme":"softwaredoctor","version":"0.1.0","orientation":"portrait","userInterfaceStyle":"dark","plugins":["expo-router","expo-secure-store"],"android":{"package":"ai.softwaredoctor.mobile"},"ios":{"bundleIdentifier":"ai.softwaredoctor.mobile"},"experiments":{"typedRoutes":false}}}
