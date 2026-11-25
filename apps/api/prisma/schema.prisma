@@ -5,10 +5,35 @@ datasource db {
   provider = "postgresql"
   url = env("DATABASE_URL")
 }
-enum IncidentStatus {\n  OPEN\n  INVESTIGATING\n  RESOLVED\n  IGNORED\n}
-enum InvestigationStatus {\n  QUEUED\n  RUNNING\n  SUCCEEDED\n  FAILED\n  CANCELLED\n}
-enum CreditKind {\n  GRANT\n  RESERVE\n  CONSUME\n  RELEASE\n  PURCHASE\n  REFUND\n}
-enum SubscriptionStatus {\n  INCOMPLETE\n  TRIALING\n  ACTIVE\n  PAST_DUE\n  CANCELED\n  EXPIRED\n}
+enum IncidentStatus {
+  OPEN
+  INVESTIGATING
+  RESOLVED
+  IGNORED
+}
+enum InvestigationStatus {
+  QUEUED
+  RUNNING
+  SUCCEEDED
+  FAILED
+  CANCELLED
+}
+enum CreditKind {
+  GRANT
+  RESERVE
+  CONSUME
+  RELEASE
+  PURCHASE
+  REFUND
+}
+enum SubscriptionStatus {
+  INCOMPLETE
+  TRIALING
+  ACTIVE
+  PAST_DUE
+  CANCELED
+  EXPIRED
+}
 model User {
   id String @id @default(cuid())
   email String @unique
