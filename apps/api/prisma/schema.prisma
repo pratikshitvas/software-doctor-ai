@@ -1,0 +1,258 @@
+generator client {
+  provider = "prisma-client-js"
+}
+datasource db {
+  provider = "postgresql"
+  url = env("DATABASE_URL")
+}
+enum IncidentStatus { OPEN INVESTIGATING RESOLVED IGNORED }
+enum InvestigationStatus { QUEUED RUNNING SUCCEEDED FAILED CANCELLED }
+enum CreditKind { GRANT RESERVE CONSUME RELEASE PURCHASE REFUND }
+enum SubscriptionStatus { INCOMPLETE TRIALING ACTIVE PAST_DUE CANCELED EXPIRED }
+model User {
+  id String @id @default(cuid())
+  email String @unique
+  passwordHash String
+  emailVerifiedAt DateTime?
+  name String?
+  isPlatformAdmin Boolean @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  memberships Membership[]
+  refreshTokens RefreshToken[]
+  verificationTokens VerificationToken[]
+  projects Project[] @relation("ProjectOwner")
+  investigations Investigation[]
+  creditEntries CreditLedger[]
+  subscriptions Subscription[]
+  auditLogs AuditLog[]
+}
+model RefreshToken {
+  id String @id @default(cuid())
+  userId String
+  tokenHash String @unique
+  familyId String
+  expiresAt DateTime
+  revokedAt DateTime?
+  createdAt DateTime @default(now())
+  user User @relation(fields:[userId],references:[id],onDelete:Cascade)
+  @@index([userId,familyId])
+}
+model VerificationToken {
+  id String @id @default(cuid())
+  userId String
+  tokenHash String @unique
+  purpose String
+  expiresAt DateTime
+  usedAt DateTime?
+  user User @relation(fields:[userId],references:[id],onDelete:Cascade)
+  @@index([userId,purpose])
+}
+model Organization {
+  id String @id @default(cuid())
+  name String
+  createdAt DateTime @default(now())
+  memberships Membership[]
+  projects Project[]
+  subscriptions Subscription[]
+}
+model Membership {
+  id String @id @default(cuid())
+  userId String
+  organizationId String
+  role String @default("MEMBER")
+  createdAt DateTime @default(now())
+  user User @relation(fields:[userId],references:[id],onDelete:Cascade)
+  organization Organization @relation(fields:[organizationId],references:[id],onDelete:Cascade)
+  @@unique([userId,organizationId])
+  @@index([organizationId,role])
+}
+model Project {
+  id String @id @default(cuid())
+  ownerId String
+  organizationId String?
+  name String
+  framework String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  owner User @relation("ProjectOwner",fields:[ownerId],references:[id],onDelete:Cascade)
+  organization Organization? @relation(fields:[organizationId],references:[id],onDelete:Cascade)
+  monitoringKeys MonitoringKey[]
+  incidents Incident[]
+  repository RepositoryConnection?
+  @@index([ownerId,createdAt])
+  @@index([organizationId])
+}
+model MonitoringKey {
+  id String @id @default(cuid())
+  projectId String
+  keyHash String @unique
+  keyHint String
+  revokedAt DateTime?
+  createdAt DateTime @default(now())
+  project Project @relation(fields:[projectId],references:[id],onDelete:Cascade)
+  @@index([projectId,revokedAt])
+}
+model Incident {
+  id String @id @default(cuid())
+  projectId String
+  fingerprint String
+  title String
+  severity String @default("unknown")
+  status IncidentStatus @default(OPEN)
+  firstSeenAt DateTime @default(now())
+  lastSeenAt DateTime @default(now())
+  eventCount Int @default(1)
+  latestStack String?
+  environment Json?
+  project Project @relation(fields:[projectId],references:[id],onDelete:Cascade)
+  events ErrorEvent[]
+  investigations Investigation[]
+  @@unique([projectId,fingerprint])
+  @@index([projectId,status,lastSeenAt])
+}
+model ErrorEvent {
+  id String @id @default(cuid())
+  incidentId String
+  message String
+  stack String?
+  occurredAt DateTime @default(now())
+  metadata Json?
+  incident Incident @relation(fields:[incidentId],references:[id],onDelete:Cascade)
+  @@index([incidentId,occurredAt])
+}
+model RepositoryConnection {
+  id String @id @default(cuid())
+  projectId String @unique
+  provider String
+  externalId String
+  fullName String
+  encryptedAccessToken String?
+  connectedAt DateTime @default(now())
+  revokedAt DateTime?
+  project Project @relation(fields:[projectId],references:[id],onDelete:Cascade)
+}
+model Investigation {
+  id String @id @default(cuid())
+  userId String
+  incidentId String?
+  status InvestigationStatus @default(QUEUED)
+  inputSummary String
+  report Json?
+  failureReason String?
+  idempotencyKey String
+  startedAt DateTime @default(now())
+  completedAt DateTime?
+  user User @relation(fields:[userId],references:[id],onDelete:Cascade)
+  incident Incident? @relation(fields:[incidentId],references:[id],onDelete:SetNull)
+  evidence InvestigationEvidence[]
+  patch ProposedPatch?
+  tests TestRecommendation[]
+  @@unique([userId,idempotencyKey])
+  @@index([userId,startedAt])
+}
+model InvestigationEvidence {
+  id String @id @default(cuid())
+  investigationId String
+  kind String
+  source String?
+  content Json
+  investigation Investigation @relation(fields:[investigationId],references:[id],onDelete:Cascade)
+}
+model ProposedPatch {
+  id String @id @default(cuid())
+  investigationId String @unique
+  unifiedDiff String
+  explanation String
+  riskAssessment String
+  approvedAt DateTime?
+  investigation Investigation @relation(fields:[investigationId],references:[id],onDelete:Cascade)
+}
+model TestRecommendation {
+  id String @id @default(cuid())
+  investigationId String
+  description String
+  testCode String?
+  investigation Investigation @relation(fields:[investigationId],references:[id],onDelete:Cascade)
+  @@index([investigationId])
+}
+model CreditLedger {
+  id String @id @default(cuid())
+  userId String
+  kind CreditKind
+  amount Int
+  investigationId String?
+  idempotencyKey String?
+  createdAt DateTime @default(now())
+  user User @relation(fields:[userId],references:[id],onDelete:Cascade)
+  @@unique([userId,idempotencyKey])
+  @@index([userId,createdAt])
+}
+model Plan {
+  id String @id @default(cuid())
+  code String @unique
+  name String
+  priceMinor Int
+  currency String @default("INR")
+  investigationAllowance Int
+  interval String?
+  active Boolean @default(true)
+  subscriptions Subscription[]
+}
+model Subscription {
+  id String @id @default(cuid())
+  userId String?
+  organizationId String?
+  planId String
+  status SubscriptionStatus @default(INCOMPLETE)
+  provider String?
+  providerRef String?
+  currentPeriodEnd DateTime?
+  createdAt DateTime @default(now())
+  user User? @relation(fields:[userId],references:[id],onDelete:SetNull)
+  organization Organization? @relation(fields:[organizationId],references:[id],onDelete:Cascade)
+  plan Plan @relation(fields:[planId],references:[id])
+  payments Payment[]
+  @@index([userId,status])
+}
+model Payment {
+  id String @id @default(cuid())
+  subscriptionId String?
+  provider String
+  providerPaymentId String @unique
+  amountMinor Int
+  currency String
+  status String
+  verifiedAt DateTime?
+  createdAt DateTime @default(now())
+  subscription Subscription? @relation(fields:[subscriptionId],references:[id],onDelete:SetNull)
+}
+model WebhookEvent {
+  id String @id @default(cuid())
+  provider String
+  providerEventId String
+  processedAt DateTime?
+  payload Json
+  createdAt DateTime @default(now())
+  @@unique([provider,providerEventId])
+}
+model Notification {
+  id String @id @default(cuid())
+  userId String
+  kind String
+  payload Json
+  readAt DateTime?
+  createdAt DateTime @default(now())
+  @@index([userId,createdAt])
+}
+model AuditLog {
+  id String @id @default(cuid())
+  userId String?
+  action String
+  resourceType String
+  resourceId String?
+  metadata Json?
+  createdAt DateTime @default(now())
+  user User? @relation(fields:[userId],references:[id],onDelete:SetNull)
+  @@index([userId,createdAt])
+}
