@@ -8,7 +8,8 @@ export default function App(){
  const [email,setEmail]=useState(""),[password,setPassword]=useState(""),[name,setName]=useState(""),[error,setError]=useState(""),[code,setCode]=useState(""),[language,setLanguage]=useState("Auto-detect"),[projectName,setProjectName]=useState("");
  async function request(path,options={}){const r=await fetch(API+path,{...options,headers:{"content-type":"application/json",...(token?{authorization:"Bearer "+token}:{}),...(options.headers||{})}});const d=r.status===204?{}:await r.json();if(!r.ok)throw Error(d.error||"Request failed.");return d}
  async function load(){if(!token)return;try{const [c,p,i,h]=await Promise.all([request("/api/credits"),request("/api/monitoring/projects"),request("/api/monitoring/incidents"),request("/api/credits/investigations")]);setCredits(c);setProjects(p.projects);setIncidents(i.incidents);setHist(h.investigations)}catch(e){setNotice(e.message)}}
- useEffect(()=>{if(token)load()},[token]);\n useEffect(()=>{const v=new URLSearchParams(location.search).get("token");if(v){setMode("verify");setPassword(v)}},[]);
+ useEffect(()=>{if(token)load()},[token]);
+ useEffect(()=>{const v=new URLSearchParams(location.search).get("token");if(v){setMode("verify");setPassword(v)}},[]);
  async function authSubmit(e){e.preventDefault();setBusy(true);setNotice("");try{
    if(mode==="register"){const d=await request("/api/auth/register",{method:"POST",body:JSON.stringify({email,password,name})});setNotice(d.message+" If email is not configured, ask your API developer to copy the development verification link from the API terminal.");setMode("verify")}
    else if(mode==="verify"){const t=new URLSearchParams(location.search).get("token")||password;const d=await request("/api/auth/verify-email",{method:"POST",body:JSON.stringify({token:t})});setToken(d.accessToken);setRefresh(d.refreshToken);setUser(d.user)}
