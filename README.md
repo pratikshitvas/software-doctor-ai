@@ -33,7 +33,7 @@ Do not treat the included plans or UI labels as a functioning checkout. No payme
 - Node.js 20+
 - npm 10+
 - PostgreSQL 14+ (installed locally or hosted; Docker is not required)
-- OpenAI API key or OpenAI-compatible AI service to run real investigations
+- Gemini API key (free-tier model) or an OpenAI-compatible AI service to run real investigations
 - SMTP account for email verification outside development
 
 ## Windows 10/11 local setup
@@ -44,7 +44,7 @@ Copy `apps/api/.env.example` to `apps/api/.env`. Set at least:
 
 - `DATABASE_URL` to your PostgreSQL database
 - `JWT_ACCESS_SECRET` to a long random value (32+ random bytes)
-- `OPENAI_API_KEY` for a real hosted AI provider
+- Set `AI_PROVIDER=gemini` and `GEMINI_API_KEY` for Gemini, or configure an OpenAI-compatible provider
 - `OPENAI_BASE_URL` and `OPENAI_MODEL` if using Ollama or another compatible server
 
 For Ollama, use its OpenAI-compatible endpoint and a model installed on your machine. The software does not install or download models automatically.
