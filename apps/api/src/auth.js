@@ -15,7 +15,8 @@ async function session(prisma,user,familyId=crypto.randomUUID()){
  return {accessToken:access(user),refreshToken:refresh,user:{id:user.id,email:user.email,name:user.name}};
 }
 async function sendVerify(user,token){
- const link=`${process.env.WEB_PUBLIC_URL||"http://localhost:5173"}/verify?token=${token}`;
+ const publicUrl=(process.env.WEB_PUBLIC_URL||(process.env.RENDER_EXTERNAL_HOSTNAME?`https://${process.env.RENDER_EXTERNAL_HOSTNAME}`:"http://localhost:5173")).replace(/\/$/,"");
+ const link=`${publicUrl}/verify?token=${token}`;
  if(process.env.RESEND_API_KEY){
   const response=await fetch("https://api.resend.com/emails",{method:"POST",headers:{"content-type":"application/json",authorization:`Bearer ${process.env.RESEND_API_KEY}`},body:JSON.stringify({from:process.env.EMAIL_FROM||"Software Doctor AI <onboarding@resend.dev>",to:[user.email],subject:"Verify your Software Doctor AI account",text:`Open this link to verify: ${link}`})});
   if(!response.ok)throw Error("Email provider could not send the verification link.");
