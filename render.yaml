@@ -25,10 +25,6 @@ services:
         value: gemini-2.5-flash
       - key: FREE_INVESTIGATIONS
         value: "2"
-      - key: WEB_ORIGIN
-        value: https://software-doctor-ai-app.onrender.com
-      - key: WEB_PUBLIC_URL
-        value: https://software-doctor-ai-app.onrender.com
       - key: RESEND_API_KEY
         value: ""
       - key: EMAIL_FROM
