@@ -1,7 +1,7 @@
 import React,{useEffect,useState} from "react";
 import {Activity,AlertTriangle,ArrowUpRight,Bug,CheckCircle2,Code2,GitBranch,History,LayoutDashboard,LoaderCircle,LogOut,Plus,RefreshCw,Settings,ShieldCheck,Sparkles,Stethoscope} from "lucide-react";
 import "./app.css";
-const API=import.meta.env.VITE_API_URL||"http://localhost:4000";
+const API=import.meta.env.VITE_API_URL??(import.meta.env.DEV?"http://localhost:4000":"");
 export default function App(){
  const [token,setToken]=useState(""),[refresh,setRefresh]=useState(""),[user,setUser]=useState(null),[mode,setMode]=useState("login"),[notice,setNotice]=useState(""),[busy,setBusy]=useState(false),[page,setPage]=useState("Overview");
  const [credits,setCredits]=useState(null),[projects,setProjects]=useState([]),[incidents,setIncidents]=useState([]),[hist,setHist]=useState([]),[report,setReport]=useState(null),[oneKey,setOneKey]=useState("");
