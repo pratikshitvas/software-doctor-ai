@@ -1,0 +1,8 @@
+{
+ "name":"@software-doctor/desktop","version":"0.1.0","private":true,"type":"module",
+ "main":"src/main.js",
+ "scripts":{"dev":"cross-env SOFTWARE_DOCTOR_URL=http://localhost:5173 electron .","start":"electron .","build":"electron-builder --win nsis --mac dmg"},
+ "dependencies":{"electron":"^33.2.1"},
+ "devDependencies":{"cross-env":"^7.0.3","electron-builder":"^25.1.8"},
+ "build":{"appId":"ai.softwaredoctor.desktop","productName":"Software Doctor AI","files":["src/**/*","package.json"],"directories":{"output":"release"},"win":{"target":"nsis"},"mac":{"target":"dmg"}}
+}
