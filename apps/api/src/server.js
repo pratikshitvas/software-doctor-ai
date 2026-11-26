@@ -14,7 +14,7 @@ import {fileURLToPath} from "node:url";
 
 const prisma=new PrismaClient(),app=express(),port=Number(process.env.PORT||4000),maxChars=Number(process.env.MAX_ANALYSIS_CHARS||50000);
 const webDist=path.resolve(path.dirname(fileURLToPath(import.meta.url)),"../../web/dist");
-app.disable("x-powered-by");app.use(helmet());app.use(cors({origin:(process.env.WEB_ORIGIN||"http://localhost:5173").split(","),credentials:true}));app.use(express.json({limit:"1mb"}));app.use((req,_res,next)=>{req.prisma=prisma;next()});
+app.disable("x-powered-by");app.set("trust proxy",1);app.use(helmet());app.use(cors({origin:(process.env.WEB_ORIGIN||"http://localhost:5173").split(","),credentials:true}));app.use(express.json({limit:"1mb"}));app.use((req,_res,next)=>{req.prisma=prisma;next()});
 app.get("/api/health",async(_req,res)=>{const provider=(process.env.AI_PROVIDER||"openai").toLowerCase();const aiConfigured=provider==="gemini"?Boolean(process.env.GEMINI_API_KEY):Boolean(process.env.OPENAI_API_KEY || /^(http:\/\/localhost|http:\/\/127\.0\.0\.1)/.test(process.env.OPENAI_BASE_URL||""));try{await prisma.$queryRaw`SELECT 1`;res.json({status:"ok",database:"connected",aiProvider:provider,aiConfigured})}catch{res.status(503).json({status:"degraded",database:"unavailable",aiProvider:provider,aiConfigured})}});
 app.use("/api/auth",rateLimit({windowMs:900000,limit:30,standardHeaders:true,legacyHeaders:false}),authRouter);
 app.use("/api/monitoring",rateLimit({windowMs:60000,limit:600,standardHeaders:true,legacyHeaders:false}),monitoringRouter);
