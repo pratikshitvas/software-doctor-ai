@@ -29,14 +29,24 @@ async function sendVerify(user,token){
  const mailer=nodemailer.createTransport({host:process.env.SMTP_HOST,port:Number(process.env.SMTP_PORT||587),secure:process.env.SMTP_SECURE==="true",auth:process.env.SMTP_USER?{user:process.env.SMTP_USER,pass:process.env.SMTP_PASSWORD}:undefined});
  await mailer.sendMail({from:process.env.EMAIL_FROM,to:user.email,subject:"Verify your Software Doctor AI account",text:`Open this link to verify: ${link}`});
 }
-router.post("/register",async(req,res,next)=>{try{
+router.post("/register",async(req,res,next)=>{let createdUserId=null;try{
  const p=registration.safeParse(req.body);if(!p.success)return res.status(400).json({error:"Invalid registration details.",details:p.error.flatten()});
- const email=p.data.email.toLowerCase();if(await req.prisma.user.findUnique({where:{email}}))return res.status(409).json({error:"Account already exists."});
- const user=await req.prisma.user.create({data:{email,name:p.data.name,passwordHash:await argon2.hash(p.data.password,{type:argon2.argon2id})}});
+ if(process.env.NODE_ENV==="production"&&!process.env.RESEND_API_KEY&&!process.env.SMTP_HOST)return res.status(503).json({error:"Email verification is not configured yet. Please try again after the service administrator enables email delivery."});
+ const email=p.data.email.toLowerCase();
+ let user=await req.prisma.user.findUnique({where:{email}});
+ if(user?.emailVerifiedAt)return res.status(409).json({error:"Account already exists."});
+ if(user&&!await argon2.verify(user.passwordHash,p.data.password))return res.status(409).json({error:"An unverified account already exists for this email. Use the same password or contact support."});
+ if(!user){user=await req.prisma.user.create({data:{email,name:p.data.name,passwordHash:await argon2.hash(p.data.password,{type:argon2.argon2id})}});createdUserId=user.id}
  const raw=crypto.randomBytes(32).toString("base64url");
- await req.prisma.verificationToken.create({data:{userId:user.id,purpose:"EMAIL_VERIFY",tokenHash:sha256(raw),expiresAt:new Date(Date.now()+86400000)}});
- await sendVerify(user,raw);
- res.status(201).json({message:"Account created. Verify your email before signing in.",verificationEmailSent:Boolean(process.env.SMTP_HOST)});
+ await req.prisma.$transaction(async tx=>{
+  await tx.verificationToken.updateMany({where:{userId:user.id,purpose:"EMAIL_VERIFY",usedAt:null},data:{usedAt:new Date()}});
+  await tx.verificationToken.create({data:{userId:user.id,purpose:"EMAIL_VERIFY",tokenHash:sha256(raw),expiresAt:new Date(Date.now()+86400000)}});
+ });
+ try{await sendVerify(user,raw)}catch(e){
+  if(createdUserId)await req.prisma.user.delete({where:{id:createdUserId}}).catch(()=>{});
+  return res.status(e.status||503).json({error:e.status===502?"Verification email could not be delivered. Try again later.":"Email verification is unavailable. Please try again later."});
+ }
+ res.status(201).json({message:"Account created. Check your email for the verification link.",verificationEmailSent:Boolean(process.env.SMTP_HOST||process.env.RESEND_API_KEY)});
 }catch(e){next(e)}});
 router.post("/verify-email",async(req,res,next)=>{try{
  const t=z.string().min(20).safeParse(req.body?.token);if(!t.success)return res.status(400).json({error:"Verification token required."});
